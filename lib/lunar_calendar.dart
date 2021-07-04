@@ -152,33 +152,40 @@ class CalendarConverter {
     }
   }
 
-  //Convert solar day to lunar day
-  static List<int> solarToLunar(int solarYear, int solarMonth, int solarDay, Timezone timezone) {
+  static List<int> sonarToLunarWithZoneOffset(
+      int solarYear, int solarMonth, int solarDay, int zoneOffset) {
     List<int> result = new List.filled(3, 1, growable: false);
 
-    var utcValue = getTimeZoneValue(timezone);
-    var k, dayNumber, monthStart, a11, b11, lunarDay, lunarMonth, lunarYear, lunarLeap;
+    var k,
+        dayNumber,
+        monthStart,
+        a11,
+        b11,
+        lunarDay,
+        lunarMonth,
+        lunarYear,
+        lunarLeap;
     dayNumber = jdFromDate(solarDay, solarMonth, solarYear);
     k = INT((dayNumber - 2415021.076998695) / 29.530588853);
-    monthStart = getNewMoonDay(k + 1, utcValue);
+    monthStart = getNewMoonDay(k + 1, zoneOffset);
     if (monthStart > dayNumber) {
-      monthStart = getNewMoonDay(k, utcValue);
+      monthStart = getNewMoonDay(k, zoneOffset);
     }
-    a11 = getLunarMonth11(solarYear, utcValue);
+    a11 = getLunarMonth11(solarYear, zoneOffset);
     b11 = a11;
     if (a11 >= monthStart) {
       lunarYear = solarYear;
-      a11 = getLunarMonth11(solarYear - 1, utcValue);
+      a11 = getLunarMonth11(solarYear - 1, zoneOffset);
     } else {
       lunarYear = solarYear + 1;
-      b11 = getLunarMonth11(solarYear + 1, utcValue);
+      b11 = getLunarMonth11(solarYear + 1, zoneOffset);
     }
     lunarDay = dayNumber - monthStart + 1;
     var diff = INT((monthStart - a11) / 29);
     lunarLeap = 0;
     lunarMonth = diff + 11;
     if (b11 - a11 > 365) {
-      var leapMonthDiff = getLeapMonthOffset(a11, utcValue)!;
+      var leapMonthDiff = getLeapMonthOffset(a11, zoneOffset)!;
       if (diff >= leapMonthDiff) {
         lunarMonth = diff + 10;
         if (diff == leapMonthDiff) {
@@ -200,25 +207,31 @@ class CalendarConverter {
     return result;
   }
 
-  //Convert lunar day to solar day
-  List<int> lunarToSolar(int lunarYear,int lunarMonth, int lunarDay, int lunarLeap, Timezone timezone) {
+  //Convert solar day to lunar day
+  static List<int> solarToLunar(
+      int solarYear, int solarMonth, int solarDay, Timezone timezone) {
+    return sonarToLunarWithZoneOffset(
+        solarYear, solarMonth, solarDay, getTimeZoneValue(timezone));
+  }
+
+  static List<int> lunarToSolarWithZoneOffset(int lunarYear, int lunarMonth,
+      int lunarDay, int lunarLeap, int zoneOffset) {
     List<int> result = new List.filled(3, 1, growable: false);
 
-    var utcValue = getTimeZoneValue(timezone);
     var k, a11, b11, off, leapOff, leapMonth, monthStart;
     if (lunarMonth < 11) {
-      a11 = getLunarMonth11(lunarYear - 1, utcValue);
-      b11 = getLunarMonth11(lunarYear, utcValue);
+      a11 = getLunarMonth11(lunarYear - 1, zoneOffset);
+      b11 = getLunarMonth11(lunarYear, zoneOffset);
     } else {
-      a11 = getLunarMonth11(lunarYear, utcValue);
-      b11 = getLunarMonth11(lunarYear + 1, utcValue);
+      a11 = getLunarMonth11(lunarYear, zoneOffset);
+      b11 = getLunarMonth11(lunarYear + 1, zoneOffset);
     }
     off = lunarMonth - 11;
     if (off < 0) {
       off += 12;
     }
     if (b11 - a11 > 365) {
-      leapOff = getLeapMonthOffset(a11, utcValue);
+      leapOff = getLeapMonthOffset(a11, zoneOffset);
       leapMonth = leapOff - 2;
       if (leapMonth < 0) {
         leapMonth += 12;
@@ -232,8 +245,14 @@ class CalendarConverter {
       }
     }
     k = INT(0.5 + (a11 - 2415021.076998695) / 29.530588853);
-    monthStart = getNewMoonDay(k + off, utcValue);
+    monthStart = getNewMoonDay(k + off, zoneOffset);
     return jdToDate(monthStart + lunarDay - 1);
   }
 
+  //Convert lunar day to solar day
+  List<int> lunarToSolar(int lunarYear, int lunarMonth, int lunarDay,
+      int lunarLeap, Timezone timezone) {
+    return lunarToSolarWithZoneOffset(
+        lunarYear, lunarMonth, lunarDay, lunarLeap, getTimeZoneValue(timezone));
+  }
 }
